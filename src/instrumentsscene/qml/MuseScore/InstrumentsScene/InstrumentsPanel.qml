@@ -307,11 +307,40 @@ Item {
                             return
                         }
 
-                        instrumentsTreeModel.moveRows(drag.source.index.parent,
-                                                     drag.source.index.row,
-                                                     1,
-                                                     styleData.index.parent,
-                                                     styleData.index.row)
+                        console.log("onEntered!", drag.accepted)
+
+//                        instrumentsTreeModel.setLoadingBlocked(true)
+
+                        instrumentsTreeModel.beginMoveRows(drag.source.index.parent,
+                                                           drag.source.index.row,
+                                                           1,
+                                                           styleData.index.parent,
+                                                           styleData.index.row)
+
+
+//                        drag.accept();
+
+                    }
+
+                    onDropped: function(drag) {
+                        console.log("onDropped 1")
+                        if (styleData.index === drag.source.index || !styleData.value.canAcceptDrop(drag.source.item)) {
+                            return
+                        }
+
+                        console.log("onDropped 2")
+                        instrumentsTreeModel.applyMoveToNotation(drag.source.index.parent,
+                                                                 drag.source.index.row,
+                                                                 1,
+                                                                 styleData.index.parent,
+                                                                 styleData.index.row);
+
+                        instrumentsTreeModel.endMoveRows();
+//                        instrumentsTreeModel.setLoadingBlocked(false)
+
+
+
+
                     }
                 }
             }

@@ -97,6 +97,7 @@ void InstrumentsPanelTreeModel::onMasterNotationChanged()
 
 void InstrumentsPanelTreeModel::onNotationChanged()
 {
+    LOGD() << "entered onNotationChanged";
     m_partsNotifyReceiver->disconnectAll();
 
     if (m_isLoadingBlocked) {
@@ -108,6 +109,7 @@ void InstrumentsPanelTreeModel::onNotationChanged()
     m_notation = context()->currentNotation();
 
     if (m_notation) {
+        LOGD() << "reloading notation from onNotationChanged";
         load();
     } else {
         clear();
@@ -312,6 +314,8 @@ void InstrumentsPanelTreeModel::load()
 
     TRACEFUNC;
 
+    LOGD() << "load()";
+
     beginResetModel();
     deleteItems();
 
@@ -434,11 +438,9 @@ void InstrumentsPanelTreeModel::removeSelectedRows()
     removeRows(firstIndex.row(), selectedIndexList.size(), firstIndex.parent());
 }
 
-bool InstrumentsPanelTreeModel::moveRows(const QModelIndex& sourceParent, int sourceRow, int count, const QModelIndex& destinationParent,
-                                         int destinationChild)
+InstrumentsPanelTreeModel::MoveRowsData InstrumentsPanelTreeModel::calculateMoveRowsData(const QModelIndex& sourceParent, int sourceRow, int count,
+                                                                                         const QModelIndex& destinationParent, int destinationChild)
 {
-    setLoadingBlocked(true);
-
     AbstractInstrumentsPanelTreeItem* sourceParentItem = modelIndexToItem(sourceParent);
     AbstractInstrumentsPanelTreeItem* destinationParentItem = modelIndexToItem(destinationParent);
 
@@ -455,15 +457,41 @@ bool InstrumentsPanelTreeModel::moveRows(const QModelIndex& sourceParent, int so
     int destinationRow = (sourceLastRow > destinationChild
                           || sourceParentItem != destinationParentItem) ? destinationChild : destinationChild + 1;
 
-    beginMoveRows(sourceParent, sourceFirstRow, sourceLastRow, destinationParent, destinationRow);
-    sourceParentItem->moveChildren(sourceFirstRow, count, destinationParentItem, destinationRow);
-    endMoveRows();
+    return {sourceParentItem, destinationParentItem, sourceFirstRow, sourceLastRow, destinationRow, count};
+}
 
-    updateRearrangementAvailability();
+bool InstrumentsPanelTreeModel::moveRows(const QModelIndex& sourceParent, int sourceRow, int count, const QModelIndex& destinationParent,
+                                         int destinationChild)
+{
+    setLoadingBlocked(true);
+
+    beginMoveRows(sourceParent, sourceRow, count, destinationParent, destinationChild);
+    applyMoveToNotation(sourceParent, sourceRow, count, destinationParent, destinationChild);
+    endMoveRows();
 
     setLoadingBlocked(false);
 
     return true;
+}
+
+bool InstrumentsPanelTreeModel::beginMoveRows(const QModelIndex& sourceParent, int sourceRow, int count,
+                                                                                 const QModelIndex& destinationParent, int destinationChild)
+{
+    auto data = calculateMoveRowsData(sourceParent, sourceRow, count, destinationParent, destinationChild);
+    QAbstractItemModel::beginMoveRows(sourceParent, data.sourceFirstRow, data.sourceLastRow, destinationParent, data.destinationRow);
+    return true;
+}
+
+void InstrumentsPanelTreeModel::endMoveRows()
+{
+    QAbstractItemModel::endMoveRows();
+    updateRearrangementAvailability();
+}
+
+void InstrumentsPanelTreeModel::applyMoveToNotation(const QModelIndex& sourceParent, int sourceRow, int count, const QModelIndex& destinationParent,
+                                                    int destinationChild){
+    auto data = calculateMoveRowsData(sourceParent, sourceRow, count, destinationParent, destinationChild);
+    data.sourceParentItem->moveChildren(data.sourceFirstRow, data.count, data.destinationParentItem, data.destinationRow);
 }
 
 void InstrumentsPanelTreeModel::toggleVisibilityOfSelectedRows(bool visible)

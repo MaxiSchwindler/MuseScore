@@ -90,6 +90,14 @@ public:
 
     Q_INVOKABLE bool moveRows(const QModelIndex& sourceParent, int sourceRow, int count, const QModelIndex& destinationParent,
                               int destinationChild) override;
+    Q_INVOKABLE bool beginMoveRows(const QModelIndex& sourceParent, int sourceRow, int count, const QModelIndex& destinationParent,
+                                           int destinationChild);
+    Q_INVOKABLE void endMoveRows();
+    Q_INVOKABLE void applyMoveToNotation(const QModelIndex& sourceParent, int sourceRow, int count, const QModelIndex& destinationParent,
+                                         int destinationChild);
+
+    Q_INVOKABLE void setLoadingBlocked(bool blocked);
+
 
     Q_INVOKABLE QItemSelectionModel* selectionModel() const;
 
@@ -116,12 +124,21 @@ private:
         ItemRole = Qt::UserRole + 1
     };
 
+    struct MoveRowsData {
+        AbstractInstrumentsPanelTreeItem* sourceParentItem;
+        AbstractInstrumentsPanelTreeItem* destinationParentItem;
+        int sourceFirstRow;
+        int sourceLastRow;
+        int destinationRow;
+        int count;
+    };
+    MoveRowsData calculateMoveRowsData(const QModelIndex &sourceParent, int sourceRow, int count, const QModelIndex &destinationParent, int destinationChild);
+
     void onMasterNotationChanged();
     void onNotationChanged();
 
     void initPartOrders();
     void onBeforeChangeNotation();
-    void setLoadingBlocked(bool blocked);
 
     void sortParts(notation::PartList& parts);
 
